@@ -528,12 +528,33 @@ export default function App() {
     }
   };
 
-  // Reset to initial preset defaults
+  // Wipe all database targets and user accounts clean
+  const handleWipeDatabase = useCallback(() => {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('biopulse_')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch (e) {
+      console.warn('Failed to clear storage', e);
+    }
+
+    setTargets([]);
+    setCronJobs([]);
+    setSelectedTargetId('');
+    setIsUserModalOpen(false);
+  }, []);
+
+  // Reset to clean zero-data state
   const handleResetToDefaults = () => {
-    setTargets(INITIAL_TARGETS);
-    setCronJobs(INITIAL_CRON_JOBS);
-    setSharedToken('sre-secret-heartbeat-token-2026');
-    saveUserWorkspace(currentUser, INITIAL_TARGETS, INITIAL_CRON_JOBS);
+    setTargets([]);
+    setCronJobs([]);
+    setSelectedTargetId('');
+    saveUserWorkspace(currentUser, [], []);
   };
 
   const handleSignInWithGoogle = () => {
@@ -580,6 +601,7 @@ export default function App() {
           onExportDashboard={handleExportDashboard}
           onImportDashboard={handleImportDashboard}
           onResetToDefaults={handleResetToDefaults}
+          onWipeDatabase={handleWipeDatabase}
         />
       </>
     );
@@ -684,6 +706,7 @@ export default function App() {
         onExportDashboard={handleExportDashboard}
         onImportDashboard={handleImportDashboard}
         onResetToDefaults={handleResetToDefaults}
+        onWipeDatabase={handleWipeDatabase}
       />
 
       {/* Footer */}

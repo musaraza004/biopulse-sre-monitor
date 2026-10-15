@@ -305,6 +305,24 @@ export const TargetManager: React.FC<TargetManagerProps> = ({
           <div className={`divide-y max-h-[600px] overflow-y-auto ${
             isDarkMode ? 'divide-zinc-800/60' : 'divide-slate-200'
           }`}>
+            {targets.length === 0 && (
+              <div className="p-8 text-center space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 mx-auto flex items-center justify-center">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div className={`text-xs font-bold ${isDarkMode ? 'text-zinc-200' : 'text-slate-800'}`}>No Targets Configured</div>
+                <p className={`text-[11px] max-w-xs mx-auto ${isDarkMode ? 'text-zinc-400' : 'text-slate-500'}`}>
+                  Your database is clean. Click <strong>Add Endpoint</strong> above to register your real website or API for live monitoring.
+                </p>
+                <button
+                  onClick={() => setIsAdding(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add First Target</span>
+                </button>
+              </div>
+            )}
             {targets.map(target => {
               const isSelected = target.id === selectedTarget?.id;
               const isUp = target.lastStatus === 'up';
@@ -543,6 +561,29 @@ export const TargetManager: React.FC<TargetManagerProps> = ({
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {!selectedTarget && (
+          <div className={`lg:col-span-7 rounded-3xl border p-12 text-center flex flex-col items-center justify-center space-y-4 transition-all duration-300 shadow-sm ${
+            isDarkMode ? 'bg-[#181b20] border-zinc-800/80 text-zinc-100' : 'bg-white border-slate-200 text-slate-800'
+          }`}>
+            <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+              <Crosshair className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base tracking-tight">Zero Probes in Active Database</h3>
+              <p className={`text-xs max-w-sm mx-auto mt-1 ${isDarkMode ? 'text-zinc-400' : 'text-slate-500'}`}>
+                All dummy data has been removed. You have a completely clean workspace. Add an endpoint to see real-time latency graphs, TLS expiration countdowns, and DNS records.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-semibold text-xs transition shadow-md shadow-cyan-500/20 active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Configure First Real Probe</span>
+            </button>
           </div>
         )}
       </div>

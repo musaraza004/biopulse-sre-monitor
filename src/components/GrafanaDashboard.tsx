@@ -537,6 +537,21 @@ export const GrafanaDashboard: React.FC<GrafanaDashboardProps> = ({
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-zinc-800/50' : 'divide-slate-200'}`}>
+              {filteredTargets.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="text-center py-12">
+                    <div className="max-w-md mx-auto text-center space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 mx-auto flex items-center justify-center">
+                        <Globe className="w-6 h-6" />
+                      </div>
+                      <h4 className={`font-bold text-sm ${isDarkMode ? 'text-zinc-100' : 'text-slate-900'}`}>Zero Active Probes</h4>
+                      <p className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-slate-500'}`}>
+                        All dummy data has been removed. Switch to <strong>Targets &amp; Probes</strong> above to add your real production website or API.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
               {filteredTargets.map(target => {
                 const isUp = target.lastStatus === 'up';
                 const isDown = target.lastStatus === 'down';

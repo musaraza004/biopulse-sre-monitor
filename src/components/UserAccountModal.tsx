@@ -21,7 +21,9 @@ import {
   Lock,
   HardDrive,
   Cpu,
-  Zap
+  Zap,
+  Trash2,
+  Database
 } from 'lucide-react';
 import { UserProfile, PRESET_USERS } from '../types/user.js';
 
@@ -34,6 +36,7 @@ interface UserAccountModalProps {
   onExportDashboard: () => void;
   onImportDashboard: (jsonString: string) => void;
   onResetToDefaults: () => void;
+  onWipeDatabase?: () => void;
 }
 
 export const UserAccountModal: React.FC<UserAccountModalProps> = ({
@@ -45,6 +48,7 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
   onExportDashboard,
   onImportDashboard,
   onResetToDefaults,
+  onWipeDatabase,
 }) => {
   const [activeTab, setActiveTab] = useState<'accounts' | 'free_tier' | 'github_pages' | 'backup'>('accounts');
   const [customName, setCustomName] = useState('');
@@ -616,35 +620,60 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: BACKUP */}
+          {/* TAB 4: DATABASE & BACKUP */}
           {activeTab === 'backup' && (
             <div className="space-y-4">
+              {/* How We Manage the Database 100% Free */}
               <div className={`p-4 rounded-xl border ${
-                isDarkMode ? 'bg-[#14161a] border-zinc-800' : 'bg-slate-50 border-slate-200'
+                isDarkMode ? 'bg-[#14161a] border-cyan-800/40' : 'bg-cyan-50/50 border-cyan-200'
               }`}>
-                <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2 mb-1">
-                  <Download className="w-4 h-4 text-indigo-400" />
-                  Export & Import Dashboard Config
-                </h3>
-                <p className="text-xs text-zinc-400">
-                  Save your current target probes, cron heartbeat credentials, and alert rules to a JSON file. 
-                  You can transfer this between machines or restore it at any time with 0 cloud storage cost.
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold text-cyan-400 flex items-center gap-1.5 uppercase tracking-wider">
+                    <Database className="w-4 h-4" />
+                    How Your Database is Managed ($0.00 / 100% Free)
+                  </h3>
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                    Zero Server Bills
+                  </span>
+                </div>
+                <div className="text-[11px] text-zinc-300 space-y-2">
+                  <p>
+                    Instead of paying $25–$100/month for hosted PostgreSQL, Supabase, or AWS RDS, BioPulse uses a <strong>Local-First Browser-Edge Database Engine</strong>:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-zinc-400">
+                    <li><strong className="text-zinc-200">Scoped Storage Sandbox</strong>: Data is saved directly in browser LocalStorage / IndexedDB under <code className="text-cyan-300 font-mono">biopulse_user_{'{email}'}</code>.</li>
+                    <li><strong className="text-zinc-200">Zero Cloud Egress &amp; Zero Latency</strong>: Instant queries, 0ms database lookup latency, and zero data limits.</li>
+                    <li><strong className="text-zinc-200">JSON State Portability</strong>: 1-click export and import lets you back up or transfer your monitors to another device or teammate anytime.</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Export / Import Box */}
+              <div className={`p-4 rounded-xl border ${
+                isDarkMode ? 'bg-[#181d24] border-zinc-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <h4 className="text-xs font-bold text-zinc-200 flex items-center gap-2 mb-1">
+                  <Download className="w-3.5 h-3.5 text-indigo-400" />
+                  JSON Database Backup &amp; Restore
+                </h4>
+                <p className="text-[11px] text-zinc-400">
+                  Save your real target probes, heartbeats, and alert configs to an encrypted JSON file.
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   <button
                     onClick={onExportDashboard}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-md shadow-indigo-600/20"
+                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-md shadow-indigo-600/20"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    Export Dashboard JSON
+                    Export Database JSON
                   </button>
 
-                  <label className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-xs cursor-pointer transition-colors ${
+                  <label className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl border font-semibold text-xs cursor-pointer transition-colors ${
                     isDarkMode ? 'bg-[#1e2229] border-zinc-700 hover:border-zinc-600 text-zinc-200' : 'bg-white border-slate-300 hover:border-slate-400 text-slate-700'
                   }`}>
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Import Dashboard JSON</span>
+                    <span>Import Database JSON</span>
                     <input 
                       type="file" 
                       accept=".json" 
@@ -655,30 +684,37 @@ export const UserAccountModal: React.FC<UserAccountModalProps> = ({
                 </div>
               </div>
 
-              <div className={`p-4 rounded-xl border flex items-center justify-between ${
-                isDarkMode ? 'bg-[#1e1c1b] border-amber-900/30' : 'bg-amber-50 border-amber-200'
+              {/* Danger Zone: Wipe Database & Delete All Data */}
+              <div className={`p-4 rounded-xl border ${
+                isDarkMode ? 'bg-rose-950/20 border-rose-900/40 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-900'
               }`}>
-                <div>
-                  <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Reset Workspace to Factory BioPulse Defaults
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                      Delete All Data &amp; Flush Database Clean
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-1">
+                      Permanently wipes all target probes, stored history, and user workspace caches. Starts fresh with an empty database.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">
-                    Restore the 6 reference e-commerce and bioscience probes and standard cron jobs.
-                  </p>
-                </div>
 
-                <button
-                  onClick={() => {
-                    if (confirm('Are you sure you want to reset this user dashboard to defaults?')) {
-                      onResetToDefaults();
-                      onClose();
-                    }
-                  }}
-                  className="px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 text-xs font-semibold"
-                >
-                  Reset Defaults
-                </button>
+                  <button
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete all existing data and reset your database clean?')) {
+                        if (onWipeDatabase) {
+                          onWipeDatabase();
+                        } else {
+                          onResetToDefaults();
+                        }
+                        onClose();
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shrink-0 shadow-md shadow-rose-600/20 transition active:scale-95"
+                  >
+                    Wipe Database
+                  </button>
+                </div>
               </div>
             </div>
           )}
