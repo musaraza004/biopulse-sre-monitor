@@ -1,0 +1,6 @@
+{
+  "name": "BioPulse SRE & Uptime Monitor",
+  "description": "Production SRE/DevOps observability platform and lightweight uptime monitor for websites, e-commerce storefronts, cron jobs, and bioscience APIs with Prometheus metrics, Grafana dashboards, and SSL/DNS checks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
