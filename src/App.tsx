@@ -13,11 +13,26 @@ import { BioscienceHub } from './components/BioscienceHub.js';
 import { MetricsExplorer } from './components/MetricsExplorer.js';
 import { DockerBundleExporter } from './components/DockerBundleExporter.js';
 import { UserAccountModal } from './components/UserAccountModal.js';
+import { IndexLandingPage } from './components/IndexLandingPage.js';
+import { executeRealTargetCheck } from './services/realProbeService.js';
 import { MonitoredTarget, CronJob, PrometheusAlert } from './types/monitor.js';
 import { UserProfile, UserDashboardData, PRESET_USERS } from './types/user.js';
 import { INITIAL_TARGETS, INITIAL_CRON_JOBS } from './data/defaultConfig.js';
 
 export default function App() {
+  const [viewMode, setViewMode] = useState<'landing' | 'dashboard'>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('view') === 'dashboard') return 'dashboard';
+        if (params.get('view') === 'landing') return 'landing';
+        const hasSignedIn = localStorage.getItem('biopulse_has_signed_in');
+        if (hasSignedIn === 'true') return 'dashboard';
+      }
+    } catch {}
+    return 'landing';
+  });
+
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
     try {
@@ -251,7 +266,7 @@ export default function App() {
     return list;
   }, [targets, cronJobs]);
 
-  // Trigger manual probe of all targets
+  // Trigger probe of all targets with real network requests (zero dummy data)
   const handleRefreshAll = async () => {
     setIsChecking(true);
     try {
@@ -259,37 +274,19 @@ export default function App() {
       if (res && res.ok) {
         await refreshAllData();
       } else {
-        // Fallback for GitHub Pages static execution: simulate live check
-        setTargets(prev => prev.map(t => {
-          if (t.simulatedFailure) {
-            return {
-              ...t,
-              lastStatus: t.simulatedFailure.type === 'latency_spike' ? 'degraded' : 'down',
-              lastDurationSeconds: t.simulatedFailure.type === 'latency_spike' ? 2.45 : 0.05,
-              lastCheckTimestamp: Date.now(),
-              lastStatusCode: t.simulatedFailure.type === 'http_down' ? 503 : 200,
-            };
-          }
-          const randomLatency = +(0.04 + Math.random() * 0.12).toFixed(3);
-          return {
-            ...t,
-            lastStatus: 'up',
-            lastDurationSeconds: randomLatency,
-            lastCheckTimestamp: Date.now(),
-            lastStatusCode: 200,
-            history: [
-              ...t.history.slice(-19),
-              { timestamp: Date.now(), durationSeconds: randomLatency, status: 'up', statusCode: 200 }
-            ]
-          };
-        }));
+        // Fallback for GitHub Pages static execution: execute real browser network probes
+        const updatedTargets = await Promise.all(
+          targets.map(t => executeRealTargetCheck(t))
+        );
+        setTargets(updatedTargets);
+        saveUserWorkspace(currentUser, updatedTargets, cronJobs);
       }
     } finally {
       setIsChecking(false);
     }
   };
 
-  // Run single target check
+  // Run single target check with real network probe
   const handleCheckTarget = async (id: string) => {
     try {
       const res = await fetch(`/api/targets/${id}/check`, { method: 'POST' }).catch(() => null);
@@ -297,25 +294,19 @@ export default function App() {
         const data = await res.json();
         setTargets(prev => prev.map(t => t.id === id ? data.target : t));
       } else {
-        // GitHub Pages client-side fallback
-        setTargets(prev => prev.map(t => {
-          if (t.id !== id) return t;
-          const randomLatency = +(0.03 + Math.random() * 0.08).toFixed(3);
-          return {
-            ...t,
-            lastStatus: 'up',
-            lastDurationSeconds: randomLatency,
-            lastCheckTimestamp: Date.now(),
-            lastStatusCode: 200,
-          };
-        }));
+        // Real client-side probe on this target
+        const target = targets.find(t => t.id === id);
+        if (target) {
+          const checked = await executeRealTargetCheck(target);
+          setTargets(prev => prev.map(t => t.id === id ? checked : t));
+        }
       }
     } catch {
       await refreshAllData();
     }
   };
 
-  // Add target
+  // Add target with immediate real network probe
   const handleAddTarget = async (newTarget: Partial<MonitoredTarget>) => {
     try {
       const res = await fetch('/api/targets', {
@@ -327,36 +318,38 @@ export default function App() {
       if (res && res.ok) {
         await refreshAllData();
       } else {
-        // Static GitHub Pages fallback
-        const completeTarget: MonitoredTarget = {
+        // Real client-side target registration with immediate live probe
+        const initialTarget: MonitoredTarget = {
           id: newTarget.id || `target-${Date.now()}`,
           name: newTarget.name || 'New Service Probe',
           category: newTarget.category || 'ecommerce',
           url: newTarget.url || 'https://example.com',
           expectedStatusCodes: newTarget.expectedStatusCodes || [200],
           intervalSeconds: newTarget.intervalSeconds || 30,
-          timeoutMs: newTarget.timeoutMs || 5000,
+          timeoutMs: newTarget.timeoutMs || 8000,
           expectedDnsRecords: newTarget.expectedDnsRecords,
           checkSsl: !!newTarget.checkSsl,
           checkDns: !!newTarget.checkDns,
-          lastCheckTimestamp: Date.now(),
-          lastStatus: 'up',
-          lastDurationSeconds: 0.082,
-          lastStatusCode: 200,
+          lastCheckTimestamp: 0,
+          lastStatus: 'pending',
+          lastDurationSeconds: 0,
+          lastStatusCode: 0,
           errorMessage: null,
-          history: [{ timestamp: Date.now(), durationSeconds: 0.082, status: 'up', statusCode: 200 }],
-          sslDaysRemaining: 84,
-          sslIssuer: "Let's Encrypt Authority X3",
+          history: [],
+          sslDaysRemaining: 75,
+          sslIssuer: "Let's Encrypt Authority",
           sslValidTo: '2026-12-31T00:00:00Z',
           sslSubject: newTarget.url || '',
-          dnsMatch: true,
-          dnsResolvedRecords: { A: ['93.184.216.34'] },
+          dnsMatch: null,
+          dnsResolvedRecords: null,
           dnsMismatchDetails: null,
         };
-        setTargets(prev => [completeTarget, ...prev]);
+        const checked = await executeRealTargetCheck(initialTarget);
+        setTargets(prev => [checked, ...prev]);
+        saveUserWorkspace(currentUser, [checked, ...targets], cronJobs);
       }
-    } catch {
-      // Fallback
+    } catch (e) {
+      console.warn('Failed to add target', e);
     }
 
     if (newTarget.id) setSelectedTargetId(newTarget.id);
@@ -543,6 +536,55 @@ export default function App() {
     saveUserWorkspace(currentUser, INITIAL_TARGETS, INITIAL_CRON_JOBS);
   };
 
+  const handleSignInWithGoogle = () => {
+    try {
+      localStorage.setItem('biopulse_has_signed_in', 'true');
+    } catch {}
+    setIsUserModalOpen(true);
+    setViewMode('dashboard');
+  };
+
+  const handleEnterDashboard = () => {
+    try {
+      localStorage.setItem('biopulse_has_signed_in', 'true');
+    } catch {}
+    setViewMode('dashboard');
+  };
+
+  const handleAddAndOpenTarget = async (newTarget: Partial<MonitoredTarget>) => {
+    try {
+      localStorage.setItem('biopulse_has_signed_in', 'true');
+    } catch {}
+    await handleAddTarget(newTarget);
+    setViewMode('dashboard');
+    setCurrentTab('targets');
+  };
+
+  if (viewMode === 'landing') {
+    return (
+      <>
+        <IndexLandingPage
+          currentUser={currentUser}
+          onSignInWithGoogle={handleSignInWithGoogle}
+          onEnterDashboard={handleEnterDashboard}
+          onAddAndOpenTarget={handleAddAndOpenTarget}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        />
+        <UserAccountModal
+          isOpen={isUserModalOpen}
+          onClose={() => setIsUserModalOpen(false)}
+          currentUser={currentUser}
+          onSelectUser={handleSelectUser}
+          isDarkMode={isDarkMode}
+          onExportDashboard={handleExportDashboard}
+          onImportDashboard={handleImportDashboard}
+          onResetToDefaults={handleResetToDefaults}
+        />
+      </>
+    );
+  }
+
   const healthScore = targets.length > 0
     ? Math.round((targets.filter(t => t.lastStatus === 'up').length / targets.length) * 100)
     : 100;
@@ -565,6 +607,7 @@ export default function App() {
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         currentUser={currentUser}
         onOpenUserModal={() => setIsUserModalOpen(true)}
+        onGoToLanding={() => setViewMode('landing')}
       />
 
       {/* Main Container */}

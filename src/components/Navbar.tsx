@@ -14,7 +14,8 @@ import {
   Moon,
   Sun,
   Globe,
-  ChevronDown
+  ChevronDown,
+  Home
 } from 'lucide-react';
 import { UserProfile } from '../types/user.js';
 
@@ -40,6 +41,7 @@ interface NavbarProps {
   onToggleDarkMode: () => void;
   currentUser: UserProfile;
   onOpenUserModal: () => void;
+  onGoToLanding?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -55,6 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleDarkMode,
   currentUser,
   onOpenUserModal,
+  onGoToLanding,
 }) => {
   interface TabItem {
     id: NavTab;
@@ -83,16 +86,24 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-teal-400 text-white shadow-md shadow-indigo-500/20">
+            <button 
+              onClick={onGoToLanding}
+              className="flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-teal-400 text-white shadow-md shadow-indigo-500/20 hover:scale-105 transition"
+              title="Return to Public Landing Page"
+            >
               <Activity className="w-5 h-5 animate-pulse" />
-            </div>
+            </button>
             <div>
               <div className="flex items-center gap-2">
-                <span className={`font-extrabold tracking-tight text-lg ${isDarkMode ? 'text-zinc-100' : 'text-slate-900'}`}>
+                <button
+                  onClick={onGoToLanding}
+                  className={`font-extrabold tracking-tight text-lg hover:text-cyan-400 transition ${isDarkMode ? 'text-zinc-100' : 'text-slate-900'}`}
+                  title="Return to Landing Page"
+                >
                   BioPulse SRE
-                </span>
+                </button>
                 <span className="text-[10px] uppercase tracking-wider font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  Live Engine
+                  Real Probes Active
                 </span>
                 {firingAlertsCount > 0 ? (
                   <span className="flex items-center gap-1 text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse">
@@ -106,9 +117,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </span>
                 )}
               </div>
-              <p className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'} hidden sm:block mt-0.5`}>
-                Lightweight Uptime & Observability Suite · E-Commerce & Bioscience SRE
-              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'} hidden sm:block`}>
+                  Live Telemetry Radar · Scoped Workspace for {currentUser.name}
+                </p>
+                {onGoToLanding && (
+                  <button
+                    onClick={onGoToLanding}
+                    className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium inline-flex items-center gap-1 border-b border-cyan-500/30 pb-0.5 transition"
+                  >
+                    <Home className="w-3 h-3" />
+                    <span>Home Page</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
